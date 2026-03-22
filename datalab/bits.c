@@ -167,8 +167,9 @@ int tmin(void) {
  *   Rating: 1
  */
 int isTmax(int x) {
-  int mask=(-1)^(1<<31);
-  return !(x^mask);
+  int val=(~0)^x;
+  int negval=(~val)+1;
+  return !((val^negval)|(!val));
 }
 /* 
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
@@ -273,7 +274,23 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-  return 0;
+  int ans=0,tmp=0;
+  int val=!((x<<16>>16)^x);
+  ans=val<<4;
+  tmp=ans+8;
+  val=!((x<<tmp>>tmp)^x);
+  ans+=val<<3;
+  tmp=ans+4;
+  val=!((x<<tmp>>tmp)^x);
+  ans+=val<<2;
+  tmp=ans+2;
+  val=!((x<<tmp>>tmp)^x);
+  ans+=val<<1;
+  tmp=ans+1;
+  val=!((x<<tmp>>tmp)^x);
+  ans+=val;
+  ans=(~ans)+1;
+  return 32+ans;
 }
 //float
 /* 
@@ -288,7 +305,21 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-  return 2;
+  unsigned mask1=(1u<<23)-1;
+  unsigned mask2=((1u<<8)-1);
+  unsigned op=(uf>>31)&1;
+  unsigned valfrac=uf&mask1;
+  unsigned valexp=(uf>>23)&mask2;
+  if(valexp==mask2)return uf;
+  if(valexp==0){
+    valfrac<<=1;
+    if(valfrac>mask1)valexp++;
+    valfrac&=mask1;
+  }else{
+    valexp++;
+    if(valexp==mask2)valfrac=0;
+  }
+  return (op<<31)+(valexp<<23)+valfrac;
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
@@ -303,7 +334,33 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  return 2;
+  unsigned mask1=(1u<<23)-1;
+  unsigned mask2=(1u<<8)-1;
+  int op=uf&(1<<31);
+  int valfrac=(uf&mask1);
+  int val=valfrac;
+  int valexp=(uf>>23)&mask2;
+  int ans=1<<31;
+  if(valexp==mask2)return ans;
+  valexp-=127;
+  if(valexp==-127){
+    return 0;
+  }else{
+    valfrac+=(1<<23);
+    valexp-=23;
+    if(valexp<=0){
+      if(valexp<-31)valexp=-31;
+      valfrac>>=-valexp;
+    }
+    else{
+      if(valexp>=31)return ans;
+      if(op)val=-val;
+      if((val<<valexp>>valexp)!=val)return ans;
+      valfrac<<=valexp;
+    }
+    if(op)return -valfrac;
+    else return valfrac;
+  }
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
@@ -319,5 +376,13 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+    if(x<-149)return 0;
+    if(x>127)return ((1u<<8)-1)<<23;
+    if(x>=-149&&x<=-127){
+      x+=127;
+      return 1<<(23+x);
+    }else{
+      x+=127;
+      return x<<23; 
+    }
 }
