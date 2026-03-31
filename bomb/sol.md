@@ -90,3 +90,45 @@ ionefg
 
 ## phase_6
 
+汇编写了很长，认真研究了一下，实际在干的事情很简单：
+
+1. 内存里提前存好了一个 $6$ 个元素的链表，具体的:
+
+```cpp
+struct list{
+	int ind;
+    int val;
+    struct *next;
+};
+```
+
+2. 输入一个长度为 $6$ 的排列，把排列第 $i$ 个位置的值 $a_i$ 换成 $7-a_i$ ，然后将这个链表按照输入的排列的顺序重排
+3. 要求重新排好的链表的 val 单调不增
+
+gdb 得到 $6$ 个 val 值分别为 $0x14c,0xa8,0x39c,0x2b3,0x1dd,0x1bb$ 
+
+### answer
+
+4 3 2 1 5 6
+
+
+
+## secret_phase
+
+按理 $6$ 个 phase 解决了他也 congratulation 了，但是看汇编发现还有一个 secret_phase 和 fun7 ，发现是在 phase_defused 里进入的，且只有 $6$ 个 phase 全部解决了才有可能进入，去网上查了 sscanf 到底在干啥，发现是把输入格式存在了 %rsi 里，然后进入 secret_phase 的条件是 phase_4 的输入在末尾多输入一个 DrEvil ，然后观察 fun7 ，首先输入一个数不得大于 0x3e7 ，然后 fun7 大概长这样：
+
+```cpp
+int fun7(int *x){
+    if(x==nullptr)return 0xfffffff;
+    int val=*x;
+    if(val<res)return 2*fun7(x+16)+1;
+    else if(val==res)return 0;
+    else return 2*fun7(x+8);
+}
+```
+
+其中 res=%rax ，初始传入的 *x 为 0x6030f ，要求返回值为 $2$ ，那说明进去一定是 $>,<,若干个>,=$ 的顺序递归， gdb 查看一下对应内存的地址， res=0x16 是合法的。 
+
+### answer
+
+22
